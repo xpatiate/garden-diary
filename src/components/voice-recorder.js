@@ -24,12 +24,18 @@ export function createVoiceRecorder(onTranscript) {
       </svg>
       <span id="mic-label">Record voice note</span>
     </button>
-    <div class="voice-transcript" id="voice-transcript"></div>
+    <textarea class="input textarea voice-transcript" id="voice-transcript" rows="4" placeholder="Transcript will appear here…" style="display:none"></textarea>
   `;
 
   const micBtn = wrapper.querySelector('#btn-mic');
   const micLabel = wrapper.querySelector('#mic-label');
   const transcriptEl = wrapper.querySelector('#voice-transcript');
+
+  transcriptEl.addEventListener('input', () => {
+    savedText = transcriptEl.value;
+    committed = '';
+    onTranscript(transcriptEl.value);
+  });
 
   function startRecognition() {
     recognition = new SpeechRecognition();
@@ -39,22 +45,23 @@ export function createVoiceRecorder(onTranscript) {
 
     recognition.onresult = (event) => {
       let interim = '';
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      let finals = '';
+      for (let i = 0; i < event.results.length; i++) {
         const text = event.results[i][0].transcript;
-        if (event.results[i].isFinal) final += text;
+        if (event.results[i].isFinal) finals += text;
         else interim += text;
       }
-      committed += final;
+      committed = finals; // assign, not accumulate — avoids re-processing old finals
       const full = savedText + committed + interim;
-      transcriptEl.textContent = full;
+      transcriptEl.value = full;
       onTranscript(full);
     };
 
     recognition.onerror = (e) => {
       if (e.error === 'not-allowed') {
         stopRecording();
-        transcriptEl.textContent = 'Microphone permission denied.';
+        transcriptEl.value = 'Microphone permission denied.';
+        transcriptEl.style.display = '';
       }
       // 'no-speech' and others are handled by onend auto-restart
     };
@@ -75,6 +82,8 @@ export function createVoiceRecorder(onTranscript) {
     if (recognition) recognition.stop();
     micBtn.classList.remove('recording');
     micLabel.textContent = 'Record voice note';
+    transcriptEl.readOnly = false;
+    if (transcriptEl.value) transcriptEl.style.display = '';
   }
 
   micBtn.addEventListener('click', () => {
@@ -82,10 +91,12 @@ export function createVoiceRecorder(onTranscript) {
       stopRecording();
     } else {
       isRecording = true;
-      savedText = '';
+      savedText = transcriptEl.value; // preserve any prior edits
       committed = '';
       micBtn.classList.add('recording');
       micLabel.textContent = 'Stop recording';
+      transcriptEl.readOnly = true;
+      transcriptEl.style.display = '';
       startRecognition();
     }
   });

@@ -1,6 +1,6 @@
 import { signInWithGoogle, redirectResultPromise } from '../services/auth.js';
 
-export async function renderLogin(container) {
+export async function renderLogin(container, errorMessage = '') {
   container.innerHTML = `
     <div class="login-screen">
       <div class="login-card">
@@ -22,6 +22,8 @@ export async function renderLogin(container) {
   `;
 
   const errorEl = container.querySelector('#login-error');
+
+  if (errorMessage) errorEl.textContent = errorMessage;
 
   redirectResultPromise.catch(err => {
     errorEl.textContent = `Sign-in failed: ${err.code || err.message}`;

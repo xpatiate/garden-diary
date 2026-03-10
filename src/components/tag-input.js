@@ -1,8 +1,8 @@
-export function createTagInput(onChange) {
+export function createTagInput(onChange, initialTags = []) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tag-input-wrapper';
 
-  let tags = [];
+  let tags = [...initialTags];
 
   function render() {
     wrapper.innerHTML = `

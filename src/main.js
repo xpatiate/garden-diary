@@ -1,5 +1,7 @@
 import './styles.css';
-import { onAuthChange } from './services/auth.js';
+import { onAuthChange, signOutUser } from './services/auth.js';
+
+const ALLOWED_EMAILS = ['catstarpipewall@gmail.com'];
 import { renderLogin } from './views/login.js';
 import { renderHome } from './views/home.js';
 import { renderNewEntry } from './views/new-entry.js';
@@ -23,6 +25,14 @@ function getContentEl() {
 }
 
 onAuthChange(user => {
+  if (user && !ALLOWED_EMAILS.includes(user.email)) {
+    signOutUser();
+    appEl.innerHTML = '';
+    navEl = null;
+    renderLogin(appEl, 'Access denied. This is a private app.');
+    return;
+  }
+
   currentUser = user;
 
   if (!user) {
