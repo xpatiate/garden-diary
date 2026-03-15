@@ -1,4 +1,5 @@
 import { getEntries } from '../services/entries.js';
+import { getPhotoUrl } from '../services/photos.js';
 import { navigate } from '../router.js';
 
 function formatDate(ts) {
@@ -52,6 +53,9 @@ export async function renderHome(container, user) {
         </div>
         <div class="calendar-days" id="calendar-days"></div>
       </div>
+      <div class="search-bar">
+        <input class="search-input" id="search-input" type="search" placeholder="Search notes, tags…" autocomplete="off" />
+      </div>
       <div class="tag-filter-bar" id="tag-filter-bar"></div>
       <div class="date-nav" id="date-nav"></div>
       <main class="entry-list" id="entry-list">
@@ -73,6 +77,12 @@ export async function renderHome(container, user) {
 
   let activeTag = null;
   let selectedDate = null; // 'YYYY-MM-DD' or null
+  let searchQuery = '';
+
+  container.querySelector('#search-input').addEventListener('input', e => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    renderList();
+  });
 
   const now = new Date();
   let calYear = now.getFullYear();
@@ -151,6 +161,13 @@ export async function renderHome(container, user) {
     renderList();
   }
 
+  function matchesSearch(entry) {
+    if (!searchQuery) return true;
+    return (entry.textNote || '').toLowerCase().includes(searchQuery)
+      || (entry.voiceTranscript || '').toLowerCase().includes(searchQuery)
+      || (entry.tags || []).some(t => t.toLowerCase().includes(searchQuery));
+  }
+
   function renderList() {
     let filtered = entries;
 
@@ -160,10 +177,14 @@ export async function renderHome(container, user) {
     if (activeTag) {
       filtered = filtered.filter(e => (e.tags || []).includes(activeTag));
     }
+    if (searchQuery) {
+      filtered = filtered.filter(matchesSearch);
+    }
 
     if (filtered.length === 0) {
       let msg;
-      if (selectedDate && activeTag) msg = `No "${activeTag}" entries on this date.`;
+      if (searchQuery)               msg = `No entries matching "${searchQuery}".`;
+      else if (selectedDate && activeTag) msg = `No "${activeTag}" entries on this date.`;
       else if (selectedDate)         msg = 'No entries on this date.';
       else if (activeTag)            msg = `No entries tagged "${activeTag}".`;
       else                           msg = 'No entries yet.<br>Tap <strong>+</strong> to add your first garden note.';
@@ -189,10 +210,11 @@ export async function renderHome(container, user) {
           <div class="entry-card__body">
             <p class="entry-card__preview">${preview.slice(0, 120)}${preview.length > 120 ? '…' : ''}</p>
             <div class="entry-card__meta">
-              ${photoCount > 0 ? `<span class="entry-card__photos">📷 ${photoCount}</span>` : ''}
+              ${photoCount > 1 ? `<span class="entry-card__photos">📷 ${photoCount}</span>` : ''}
               ${entryTags.map(t => `<span class="tag-chip tag-chip--small">${t}</span>`).join('')}
             </div>
           </div>
+          ${photoCount > 0 ? `<div class="entry-thumb-slot" data-ref="${entry.photoRefs[0]}"></div>` : ''}
         `;
         card.addEventListener('click', () => navigate(`/entry/${entry.id}`));
         section.appendChild(card);
@@ -200,6 +222,22 @@ export async function renderHome(container, user) {
 
       listEl.appendChild(section);
     }
+
+    // Fetch thumbnail URLs asynchronously — list is already visible, images pop in
+    listEl.querySelectorAll('.entry-thumb-slot').forEach(async slot => {
+      try {
+        const url = await getPhotoUrl(slot.dataset.ref);
+        if (!slot.isConnected) return; // list was re-rendered before URL resolved
+        const img = document.createElement('img');
+        img.src = url;
+        img.loading = 'lazy';
+        img.className = 'entry-thumb';
+        img.alt = '';
+        slot.appendChild(img);
+      } catch {
+        // silently skip entries whose photo URL can't be fetched
+      }
+    });
   }
 
   try {

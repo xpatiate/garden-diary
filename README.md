@@ -35,6 +35,7 @@ A personal garden journal PWA built for Android Chrome. Records dated entries co
 | Database | Firebase Firestore | NoSQL document store; one collection per user |
 | Storage | Firebase Cloud Storage | Photo blobs; paths stored in Firestore |
 | Voice | Web Speech API | Browser-native; Android Chrome only |
+| EXIF | exifr | Reads EXIF metadata from photo files client-side |
 | Dev HTTPS | @vitejs/plugin-basic-ssl | Self-signed cert for local dev (required for camera/mic APIs) |
 | Tests | Vitest + happy-dom | Unit tests; happy-dom provides a lightweight DOM environment |
 
@@ -64,9 +65,10 @@ Navigation is done via `navigate(path)`, which sets `window.location.hash`.
 Each view is a single async function that writes HTML into the content container and attaches event listeners. Views are stateless in the sense that they don't persist state between navigations — every visit to a route re-renders from scratch (re-fetching data from Firestore).
 
 - **`login.js`** — Google sign-in button; handles auth errors.
-- **`home.js`** — Lists all entries grouped by date. Shows tag filter pills. Entries are fetched fresh on every visit.
+- **`home.js`** — Lists all entries grouped by date. Shows a collapsible month calendar (tap the calendar icon in the header) for browsing by date, with prev/next navigation between entry dates. Tag filter pills and date filter compose together. Entry cards show a thumbnail of the first photo.
 - **`new-entry.js`** — Form to create an entry. Saves the Firestore document first, then uploads photos and updates the `photoRefs` field. This two-phase save means a failed photo upload leaves a document with no photos rather than failing silently.
-- **`entry.js`** — Shows a single entry. Has two internal render modes: view mode and edit mode, switched by toggling between `renderView()` and `renderEdit()` functions. Editing tracks deleted photos in a `Set` and new photos in an array, applying both atomically on save.
+- **`entry.js`** — Shows a single entry. Has two internal render modes: view mode and edit mode, switched by toggling between `renderView()` and `renderEdit()` functions. Editing tracks deleted photos in a `Set` and new photos in an array, applying both atomically on save. Photos open in a full-screen in-app lightbox with prev/next navigation.
+- **`import.js`** — Bulk photo import flow. See [Bulk photo import](#bulk-photo-import).
 
 ### Components
 
@@ -79,11 +81,12 @@ Components are functions that return a DOM element. They manage their own intern
 
 ### Services
 
-Service modules abstract Firebase SDK calls. They are the only files that import from `firebase/*` or `../firebase.js`. Views and components import from services only.
+Service modules abstract Firebase SDK calls and other data logic. They are the only files that import from `firebase/*` or `../firebase.js`. Views and components import from services only.
 
 - **`auth.js`** — `signInWithGoogle()`, `signOutUser()`, `onAuthChange(callback)`.
 - **`entries.js`** — Firestore CRUD: `createEntry`, `updateEntry`, `deleteEntry`, `getEntries`, `getEntry`.
 - **`photos.js`** — `resizeImage(blob)` (canvas resize to ≤1920px, JPEG 0.85), `uploadPhoto`, `uploadPhotos`, `getPhotoUrl`, `deletePhoto`.
+- **`exif.js`** — `getPhotoDate(file)` (EXIF then filename fallback), `groupPhotosByDate(results)`, `localDateStr(date)`. See [Bulk photo import](#bulk-photo-import).
 
 ---
 
@@ -98,24 +101,27 @@ garden-diary/
 │   ├── router.js              # Hash-based router
 │   ├── views/
 │   │   ├── login.js           # Sign-in screen
-│   │   ├── home.js            # Entry list with date grouping and tag filter
+│   │   ├── home.js            # Entry list with calendar, date/tag filters, thumbnails
 │   │   ├── new-entry.js       # Create entry form
-│   │   └── entry.js           # Entry detail + inline edit
+│   │   ├── entry.js           # Entry detail + inline edit + photo lightbox
+│   │   └── import.js          # Bulk photo import flow
 │   ├── components/
 │   │   ├── nav.js             # Bottom navigation bar
 │   │   ├── camera.js          # Photo capture/gallery picker
 │   │   ├── voice-recorder.js  # Web Speech API wrapper
-│   │   └── tag-input.js       # Tag chip input
+│   │   └── tag-input.js       # Tag chip input with existing-tag suggestions
 │   └── services/
 │       ├── auth.js            # Firebase Auth wrappers
 │       ├── entries.js         # Firestore CRUD
-│       └── photos.js          # Storage upload/download/delete + canvas resize
+│       ├── photos.js          # Storage upload/download/delete + canvas resize
+│       └── exif.js            # EXIF date reading + filename parsing + date grouping
 ├── src/tests/
 │   ├── router.test.js
 │   ├── tag-input.test.js
 │   ├── entries.test.js
 │   ├── photos.test.js
-│   └── voice-recorder.test.js
+│   ├── voice-recorder.test.js
+│   └── exif.test.js
 ├── public/
 │   └── icons/
 │       ├── icon-192.png       # PWA icon (green background, "GD")
@@ -253,10 +259,11 @@ Tests use [Vitest](https://vitest.dev/) with [happy-dom](https://github.com/capr
 | Suite | What is tested |
 |---|---|
 | `router.test.js` | Route matching, `:param` extraction, multi-param routes, cleanup callbacks, `navigate()` |
-| `tag-input.test.js` | Add/remove tags, Enter/comma/blur triggers, lowercase+trim normalisation, dedup, Backspace removal |
+| `tag-input.test.js` | Add/remove tags, Enter/comma/blur triggers, lowercase+trim normalisation, dedup, Backspace removal, suggestion chips |
 | `entries.test.js` | `createEntry` defaults and field merging, `updateEntry` path and `updatedAt`, `deleteEntry`, `getEntries` response mapping, `getEntry` null/found cases |
 | `photos.test.js` | `resizeImage` scale-down, no-upscale, portrait images, null blob and load error handling, URL revocation; `uploadPhoto` return path; `uploadPhotos` progress callback; `getPhotoUrl`; `deletePhoto` |
 | `voice-recorder.test.js` | Unsupported browser fallback, recording start/stop, SpeechRecognition configuration, transcript accumulation across sessions, manual edit, permission denied error |
+| `exif.test.js` | EXIF tag priority (`DateTimeOriginal` → `CreateDate` → `DateTime`), EXIF error fallback to filename, filename pattern coverage (Android, WhatsApp, Screenshot), invalid year rejection, `groupPhotosByDate` grouping/ordering/unmatched handling |
 
 **Firebase mocking:** `vi.mock('firebase/firestore', ...)` and `vi.mock('../firebase.js', ...)` replace all Firebase SDK calls. Mock functions are declared using `vi.hoisted()` so they are available when the mock factory is evaluated (Vitest hoists `vi.mock` calls to the top of the file before imports run).
 
@@ -361,6 +368,34 @@ The layout is a flex column. The `#content` div has `padding-bottom: var(--nav-h
 
 ---
 
-## Planned features
+## Bulk photo import
 
-- **Bulk photo import with EXIF date autodetection** — import a batch of photos and automatically group them into entries by the date embedded in each photo's EXIF metadata.
+Accessible via "Import multiple photos by date →" in the new entry form, or directly at `#/import`.
+
+### Flow
+
+1. **Pick** — multi-select photos from the gallery (no camera capture).
+2. **Preview** — the app reads EXIF metadata and filename patterns for each file client-side (no upload yet), then groups them by calendar date and displays a preview with scrollable thumbnail strips for each group.
+3. **Import** — one Firestore entry is created per date group, photos are uploaded sequentially, and a live progress list shows the status of each entry.
+
+### Date detection
+
+`src/services/exif.js` uses the [exifr](https://github.com/MikeKovarik/exifr) library to read EXIF tags in priority order: `DateTimeOriginal` → `CreateDate` → `DateTime`. If EXIF is absent or unreadable (e.g. WhatsApp photos, screenshots), it falls back to parsing the filename with a regex that handles the common Android and messaging app patterns:
+
+| Pattern | Example |
+|---|---|
+| `YYYYMMDD_HHMMSS` | `IMG_20250315_142305.jpg` |
+| `YYYY-MM-DD HH.MM.SS` | `2025-03-15 14.23.05.jpg` |
+| `YYYY-MM-DD_HH-MM-SS` | `2025-03-15_14-23-05.jpg` |
+| `Screenshot_YYYYMMDD-HHMMSS` | `Screenshot_20250315-142305.jpg` |
+| `WhatsApp Image YYYY-MM-DD` | `WhatsApp Image 2025-03-15 at 14.jpg` |
+
+### Undated photos
+
+If no date can be determined from EXIF or filename, the photos appear in a separate "date not found" section with a date picker. Import is blocked until all photos have a date assigned.
+
+### Design decisions
+
+- **Always creates new entries** — never merges into an existing entry for that date, even if one exists.
+- **Groups by calendar date** — photos from the same day are placed in one entry regardless of time of day.
+- **No thumbnail storage** — there is no separate thumbnail image. The home screen shows the first photo of each entry scaled down by CSS, loaded lazily and cached by the service worker.

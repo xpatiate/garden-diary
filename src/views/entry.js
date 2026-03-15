@@ -77,15 +77,61 @@ export async function renderEntry(container, user, entryId) {
   renderView(detail, entry, photoUrls);
 }
 
+export function openLightbox(urls, startIndex) {
+  let current = startIndex;
+
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.innerHTML = `
+    <button class="lightbox-close" aria-label="Close">&#x2715;</button>
+    ${urls.length > 1 ? `<button class="lightbox-prev" aria-label="Previous">&#8249;</button>` : ''}
+    <div class="lightbox-img-wrap">
+      <img class="lightbox-img" src="${urls[current]}" alt="" />
+    </div>
+    ${urls.length > 1 ? `<button class="lightbox-next" aria-label="Next">&#8250;</button>` : ''}
+    ${urls.length > 1 ? `<div class="lightbox-counter"></div>` : ''}
+  `;
+
+  const img = lb.querySelector('.lightbox-img');
+  const counter = lb.querySelector('.lightbox-counter');
+
+  function show(index) {
+    current = (index + urls.length) % urls.length;
+    img.src = urls[current];
+    if (counter) counter.textContent = `${current + 1} / ${urls.length}`;
+  }
+
+  function close() {
+    lb.remove();
+    document.removeEventListener('keydown', onKey);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape')      close();
+    if (e.key === 'ArrowLeft')   show(current - 1);
+    if (e.key === 'ArrowRight')  show(current + 1);
+  }
+
+  lb.querySelector('.lightbox-close').addEventListener('click', close);
+  lb.querySelector('.lightbox-prev')?.addEventListener('click', () => show(current - 1));
+  lb.querySelector('.lightbox-next')?.addEventListener('click', () => show(current + 1));
+
+  // Tap the dark backdrop (not the image or buttons) to close
+  lb.addEventListener('click', e => { if (e.target === lb) close(); });
+
+  document.addEventListener('keydown', onKey);
+  show(current);
+
+  document.getElementById('app').appendChild(lb);
+}
+
 function renderView(detail, entry, photoUrls) {
   detail.innerHTML = `
     <h2 class="entry-date">${formatDate(entry.date)}</h2>
     ${photoUrls.length > 0 ? `
       <div class="photo-grid">
         ${photoUrls.map((url, i) => `
-          <a href="${url}" target="_blank" rel="noopener">
-            <img class="photo-thumb" src="${url}" alt="Garden photo ${i + 1}" loading="lazy" />
-          </a>
+          <img class="photo-thumb photo-thumb--tap" src="${url}" alt="Garden photo ${i + 1}" loading="lazy" data-index="${i}" />
         `).join('')}
       </div>
     ` : ''}
@@ -110,6 +156,10 @@ function renderView(detail, entry, photoUrls) {
       <p class="empty-state">No content in this entry.</p>
     ` : ''}
   `;
+
+  detail.querySelectorAll('.photo-thumb--tap').forEach(img => {
+    img.addEventListener('click', () => openLightbox(photoUrls, Number(img.dataset.index)));
+  });
 }
 
 function renderEdit(detail, entry, photoUrls, user, entryId, onSaved) {

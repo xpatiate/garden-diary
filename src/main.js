@@ -6,6 +6,7 @@ import { renderLogin } from './views/login.js';
 import { renderHome } from './views/home.js';
 import { renderNewEntry } from './views/new-entry.js';
 import { renderEntry } from './views/entry.js';
+import { renderImport } from './views/import.js';
 import { renderNav, updateActiveNav } from './components/nav.js';
 import { defineRoute, startRouter, navigate } from './router.js';
 
@@ -70,4 +71,8 @@ defineRoute('/new', async (container) => {
 
 defineRoute('/entry/:id', async (container, params) => {
   await renderEntry(container, currentUser, params.id);
+});
+
+defineRoute('/import', async (container) => {
+  await renderImport(container, currentUser);
 });

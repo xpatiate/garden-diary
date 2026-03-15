@@ -20,6 +20,9 @@ export async function renderNewEntry(container, user) {
 
         <label class="field-label">Photos</label>
         <div id="camera-slot"></div>
+        <button type="button" class="btn--import-link" id="btn-import-link">
+          Import multiple photos by date →
+        </button>
 
         <label class="field-label" for="text-note">Text note</label>
         <textarea class="input textarea" id="text-note" placeholder="What happened in the garden today?" rows="5"></textarea>
@@ -37,6 +40,7 @@ export async function renderNewEntry(container, user) {
   `;
 
   container.querySelector('#btn-back').addEventListener('click', () => navigate('/'));
+  container.querySelector('#btn-import-link').addEventListener('click', () => navigate('/import'));
 
   // State
   const pendingPhotos = [];
