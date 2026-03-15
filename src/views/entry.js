@@ -1,4 +1,4 @@
-import { getEntry, updateEntry, deleteEntry } from '../services/entries.js';
+import { getEntry, updateEntry, deleteEntry, getEntries } from '../services/entries.js';
 import { getPhotoUrl, uploadPhotos, deletePhoto } from '../services/photos.js';
 import { createCameraComponent } from '../components/camera.js';
 import { createTagInput } from '../components/tag-input.js';
@@ -178,6 +178,12 @@ function renderEdit(detail, entry, photoUrls, user, entryId, onSaved) {
   // Tag input pre-populated
   const tagComponent = createTagInput(t => { tags = t; }, entry.tags || []);
   detail.querySelector('#tag-slot').appendChild(tagComponent);
+
+  // Populate tag suggestions from existing entries (non-blocking)
+  getEntries(user.uid).then(entries => {
+    const allTags = [...new Set(entries.flatMap(e => e.tags || []))].sort();
+    if (allTags.length) tagComponent.setSuggestions(allTags);
+  }).catch(() => {});
 
   detail.querySelector('#btn-cancel').addEventListener('click', () => {
     renderView(detail, entry, photoUrls);

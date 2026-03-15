@@ -1,4 +1,4 @@
-import { createEntry, updateEntry } from '../services/entries.js';
+import { createEntry, updateEntry, getEntries } from '../services/entries.js';
 import { uploadPhotos } from '../services/photos.js';
 import { createCameraComponent } from '../components/camera.js';
 import { createVoiceRecorder } from '../components/voice-recorder.js';
@@ -54,6 +54,12 @@ export async function renderNewEntry(container, user) {
   // Tags
   const tagComponent = createTagInput(t => { tags = t; });
   container.querySelector('#tag-slot').appendChild(tagComponent);
+
+  // Populate tag suggestions from existing entries (non-blocking)
+  getEntries(user.uid).then(entries => {
+    const allTags = [...new Set(entries.flatMap(e => e.tags || []))].sort();
+    if (allTags.length) tagComponent.setSuggestions(allTags);
+  }).catch(() => {});
 
   // Save
   container.querySelector('#btn-save').addEventListener('click', async () => {

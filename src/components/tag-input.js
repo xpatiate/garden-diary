@@ -3,8 +3,11 @@ export function createTagInput(onChange, initialTags = []) {
   wrapper.className = 'tag-input-wrapper';
 
   let tags = [...initialTags];
+  let suggestions = [];
 
   function render() {
+    const available = suggestions.filter(s => !tags.includes(s));
+
     wrapper.innerHTML = `
       <div class="tag-chips">
         ${tags.map(tag => `
@@ -14,6 +17,11 @@ export function createTagInput(onChange, initialTags = []) {
         `).join('')}
         <input class="tag-chip-input" type="text" placeholder="${tags.length ? 'Add tag…' : 'e.g. roses, watering…'}" />
       </div>
+      ${available.length > 0 ? `
+        <div class="tag-suggestions">
+          ${available.map(s => `<button type="button" class="tag-suggestion" data-tag="${s}">${s}</button>`).join('')}
+        </div>
+      ` : ''}
     `;
 
     const input = wrapper.querySelector('.tag-chip-input');
@@ -47,6 +55,14 @@ export function createTagInput(onChange, initialTags = []) {
         render();
       });
     });
+
+    wrapper.querySelectorAll('.tag-suggestion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        addTag(btn.dataset.tag);
+        render();
+        wrapper.querySelector('.tag-chip-input').focus();
+      });
+    });
   }
 
   function addTag(value) {
@@ -56,6 +72,11 @@ export function createTagInput(onChange, initialTags = []) {
       onChange([...tags]);
     }
   }
+
+  wrapper.setSuggestions = (newSuggestions) => {
+    suggestions = [...newSuggestions];
+    render();
+  };
 
   render();
   return wrapper;

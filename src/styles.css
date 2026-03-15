@@ -47,6 +47,7 @@ a { color: inherit; }
   display: flex;
   flex-direction: column;
   min-height: calc(100dvh - var(--nav-height));
+  position: relative;
 }
 
 /* ── Header ────────────────────────────────────────────────── */
@@ -196,6 +197,159 @@ a { color: inherit; }
 }
 
 .login-error { color: var(--danger); font-size: 0.85rem; margin-top: 12px; min-height: 20px; }
+
+/* ── Calendar ──────────────────────────────────────────────── */
+.calendar-toggle {
+  padding: 6px 8px;
+}
+
+.calendar-section {
+  position: absolute;
+  top: var(--header-height);
+  right: 8px;
+  width: 280px;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  padding: 10px 12px 14px;
+  z-index: 9;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.calendar-month-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.calendar-nav-btn {
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.calendar-nav-btn:active {
+  background: var(--cream-dark);
+}
+
+.calendar-day-names,
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendar-day-names {
+  margin-bottom: 2px;
+}
+
+.calendar-day-names span {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.calendar-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  font-size: 0.82rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+}
+
+.calendar-day--filler {
+  /* invisible placeholder cell */
+}
+
+.calendar-day--has-entries {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Green dot below day number for days with entries */
+.calendar-day--has-entries::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* Today gets a light green background */
+.calendar-day--today:not(.calendar-day--selected) {
+  background: rgba(74, 124, 89, 0.12);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+/* Selected day: solid green circle, white text and dot */
+.calendar-day--selected {
+  background: var(--green);
+  color: white;
+}
+
+.calendar-day--selected::after {
+  background: white;
+}
+
+.calendar-day[disabled] {
+  opacity: 0.28;
+  cursor: default;
+}
+
+/* ── Date navigation ───────────────────────────────────────── */
+.date-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--cream-dark);
+}
+
+.date-nav:empty {
+  display: none;
+}
+
+.date-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--green);
+  transition: background 0.15s;
+}
+
+.date-nav-btn:not([disabled]):active {
+  background: var(--cream-dark);
+}
+
+.date-nav-btn[disabled] {
+  color: var(--text-muted);
+  opacity: 0.4;
+  cursor: default;
+}
 
 /* ── Home / entry list ─────────────────────────────────────── */
 .entry-list { padding: 16px; }
@@ -419,6 +573,31 @@ a { color: inherit; }
   flex: 1;
 }
 
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 2px 0;
+}
+
+.tag-suggestion {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--green);
+  color: var(--green);
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tag-suggestion:active {
+  background: var(--green);
+  color: white;
+}
+
 .tag-filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -445,6 +624,10 @@ a { color: inherit; }
   background: var(--green);
   color: white;
   border-color: var(--green);
+}
+
+.tag-filter-chip--date {
+  font-variant-numeric: tabular-nums;
 }
 
 .entry-card__meta {

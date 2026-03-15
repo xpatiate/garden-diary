@@ -131,3 +131,79 @@ describe('createTagInput', () => {
     expect(onChange).toHaveBeenLastCalledWith(['roses', 'mint']);
   });
 });
+
+describe('createTagInput — suggestions', () => {
+  it('shows no suggestions initially', () => {
+    const wrapper = createTagInput(vi.fn());
+    expect(wrapper.querySelectorAll('.tag-suggestion')).toHaveLength(0);
+  });
+
+  it('renders suggestions after setSuggestions is called', () => {
+    const wrapper = createTagInput(vi.fn());
+    wrapper.setSuggestions(['roses', 'mint', 'basil']);
+
+    const buttons = [...wrapper.querySelectorAll('.tag-suggestion')];
+    expect(buttons.map(b => b.dataset.tag)).toEqual(['roses', 'mint', 'basil']);
+  });
+
+  it('hides suggestions that are already added as active tags', () => {
+    const wrapper = createTagInput(vi.fn(), ['roses']);
+    wrapper.setSuggestions(['roses', 'mint']);
+
+    const buttons = [...wrapper.querySelectorAll('.tag-suggestion')];
+    expect(buttons.map(b => b.dataset.tag)).toEqual(['mint']);
+  });
+
+  it('clicking a suggestion adds it as an active tag', () => {
+    const onChange = vi.fn();
+    const wrapper = createTagInput(onChange);
+    wrapper.setSuggestions(['roses', 'mint']);
+
+    wrapper.querySelector('.tag-suggestion[data-tag="roses"]').click();
+
+    expect(getChips(wrapper)).toContain('roses');
+    expect(onChange).toHaveBeenCalledWith(['roses']);
+  });
+
+  it('clicking a suggestion removes it from the suggestions list', () => {
+    const wrapper = createTagInput(vi.fn());
+    wrapper.setSuggestions(['roses', 'mint']);
+
+    wrapper.querySelector('.tag-suggestion[data-tag="roses"]').click();
+
+    const remaining = [...wrapper.querySelectorAll('.tag-suggestion')].map(b => b.dataset.tag);
+    expect(remaining).not.toContain('roses');
+    expect(remaining).toContain('mint');
+  });
+
+  it('removing an active tag brings it back to suggestions', () => {
+    const wrapper = createTagInput(vi.fn(), ['roses']);
+    wrapper.setSuggestions(['roses', 'mint']);
+
+    // roses is active, so only mint is in suggestions
+    expect([...wrapper.querySelectorAll('.tag-suggestion')].map(b => b.dataset.tag)).toEqual(['mint']);
+
+    // Remove roses chip
+    wrapper.querySelector('.tag-chip__remove[data-tag="roses"]').click();
+
+    // roses should now reappear in suggestions
+    const suggestions = [...wrapper.querySelectorAll('.tag-suggestion')].map(b => b.dataset.tag);
+    expect(suggestions).toContain('roses');
+  });
+
+  it('replaces suggestions when setSuggestions is called again', () => {
+    const wrapper = createTagInput(vi.fn());
+    wrapper.setSuggestions(['roses']);
+    wrapper.setSuggestions(['mint', 'basil']);
+
+    const buttons = [...wrapper.querySelectorAll('.tag-suggestion')];
+    expect(buttons.map(b => b.dataset.tag)).toEqual(['mint', 'basil']);
+  });
+
+  it('hides the suggestions section entirely when all suggestions are already active', () => {
+    const wrapper = createTagInput(vi.fn(), ['roses', 'mint']);
+    wrapper.setSuggestions(['roses', 'mint']);
+
+    expect(wrapper.querySelector('.tag-suggestions')).toBeNull();
+  });
+});
