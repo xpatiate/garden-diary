@@ -33,7 +33,9 @@ export async function renderEntry(container, user, entryId) {
     </div>
   `;
 
-  container.querySelector('#btn-back').addEventListener('click', () => navigate('/'));
+  const backRoute = sessionStorage.getItem('entryBack') || '/';
+  sessionStorage.removeItem('entryBack');
+  container.querySelector('#btn-back').addEventListener('click', () => navigate(backRoute));
 
   const detail = container.querySelector('#entry-detail');
 

@@ -908,6 +908,41 @@ a { color: inherit; }
   color: var(--text-muted);
 }
 
+/* ── Photo grid view ───────────────────────────────────────── */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 2px;
+}
+
+.photo-cell {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--cream-dark);
+  padding: 0;
+  border-radius: 0;
+  position: relative;
+}
+
+.photo-cell__placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--cream-dark);
+}
+
+.photo-cell__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s;
+}
+
+.photo-cell:active .photo-cell__img {
+  opacity: 0.8;
+}
+
 /* ── States ────────────────────────────────────────────────── */
 .loading, .empty-state, .error {
   text-align: center;

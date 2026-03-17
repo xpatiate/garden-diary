@@ -7,6 +7,7 @@ import { renderHome } from './views/home.js';
 import { renderNewEntry } from './views/new-entry.js';
 import { renderEntry } from './views/entry.js';
 import { renderImport } from './views/import.js';
+import { renderPhotos } from './views/photos.js';
 import { renderNav, updateActiveNav } from './components/nav.js';
 import { defineRoute, startRouter, navigate } from './router.js';
 
@@ -75,4 +76,8 @@ defineRoute('/entry/:id', async (container, params) => {
 
 defineRoute('/import', async (container) => {
   await renderImport(container, currentUser);
+});
+
+defineRoute('/photos', async (container) => {
+  await renderPhotos(container, currentUser);
 });
