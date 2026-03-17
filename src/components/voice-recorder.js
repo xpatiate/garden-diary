@@ -32,6 +32,7 @@ export function createVoiceRecorder(onTranscript) {
   const transcriptEl = wrapper.querySelector('#voice-transcript');
 
   transcriptEl.addEventListener('input', () => {
+    if (isRecording) return; // programmatic value changes during recording must not feed back into savedText
     savedText = transcriptEl.value;
     committed = '';
     onTranscript(transcriptEl.value);
@@ -44,14 +45,13 @@ export function createVoiceRecorder(onTranscript) {
     recognition.lang = 'en-GB';
 
     recognition.onresult = (event) => {
-      let interim = '';
-      let finals = '';
-      for (let i = 0; i < event.results.length; i++) {
-        const text = event.results[i][0].transcript;
-        if (event.results[i].isFinal) finals += text;
-        else interim += text;
+      // Chrome delivers the full utterance in every result, growing over time.
+      // The last entry is always the most complete — assign it, don't accumulate.
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) {
+        committed = last[0].transcript;
       }
-      committed = finals; // assign, not accumulate — avoids re-processing old finals
+      const interim = last.isFinal ? '' : last[0].transcript;
       const full = savedText + committed + interim;
       transcriptEl.value = full;
       onTranscript(full);
@@ -68,9 +68,8 @@ export function createVoiceRecorder(onTranscript) {
 
     recognition.onend = () => {
       if (isRecording) {
-        savedText += committed; // carry over finals from this session
-        committed = '';
-        startRecognition();
+        savedText += committed;
+        stopRecording();
       }
     };
 
