@@ -17,6 +17,7 @@ A personal garden journal PWA built for Android Chrome. Records dated entries co
 - [Deployment](#deployment)
 - [Backup](#backup)
 - [Firebase configuration](#firebase-configuration)
+- [Updating security rules](#updating-security-rules)
 - [Access control](#access-control)
 - [PWA behaviour](#pwa-behaviour)
 - [Design system](#design-system)
@@ -159,13 +160,16 @@ tags:             string[]     — lowercase tag strings
 
 Firestore timestamps are stored as Firestore `Timestamp` objects, not ISO strings. Code that reads them checks for a `.toDate()` method (Firestore Timestamp) before falling back to `new Date(value)`.
 
-**Security rules** (must be applied in the Firebase console):
+**Security rules** — see [Updating security rules](#updating-security-rules) for how to apply these:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/entries/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /users/{userId}/todos/{todoId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
@@ -273,7 +277,7 @@ Tests use [Vitest](https://vitest.dev/) with [happy-dom](https://github.com/capr
 
 ## Deployment
 
-The app is hosted on Firebase Hosting.
+The app is hosted on Firebase Hosting, and can be managed in the (Firebase console)[https://console.firebase.google.com].
 
 ```bash
 make deploy
@@ -313,6 +317,20 @@ The Firebase project details:
 | Plan | Blaze (pay-as-you-go) |
 
 Firebase config values (API key, app ID, etc.) are stored in `.env.local` as `VITE_*` variables. Vite exposes these to client-side code as `import.meta.env.VITE_*`. They are gitignored. If you need to recreate `.env.local`, the values are in the Firebase console under Project settings → Your apps → SDK setup and configuration.
+
+---
+
+## Updating security rules
+
+Firebase security rules are edited in the Firebase console — they are not deployed from this repo.
+
+**Firestore rules:** [console.firebase.google.com](https://console.firebase.google.com) → select the project → **Firestore Database** → **Rules** tab
+
+**Storage rules:** same console → **Storage** → **Rules** tab
+
+Paste in the updated rules and click **Publish**. Changes take effect within a minute or so.
+
+The current rules to apply are shown in the [Data model](#data-model) section above (Firestore) and below (Storage).
 
 ---
 

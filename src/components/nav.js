@@ -26,6 +26,13 @@ export function renderNav(container) {
       </svg>
       <span>Photos</span>
     </button>
+    <button class="nav-btn" data-route="/todos" aria-label="To-do">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+        <polyline points="4 6 5 7 7 5"/><polyline points="4 12 5 13 7 11"/><polyline points="4 18 5 19 7 17"/>
+      </svg>
+      <span>To-do</span>
+    </button>
     <button class="nav-btn nav-btn--signout" aria-label="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
